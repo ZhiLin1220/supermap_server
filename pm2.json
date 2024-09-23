@@ -1,0 +1,24 @@
+{
+  "apps": [
+    {
+      "name": "s3m_map_server",
+      "cwd": "./",
+      "script": "main.js",
+      "log_date_format": "YYYY-MM-DD HH:mm Z",
+      "error_file": "../resource/logs/pm2/rpp2.stderr.log",
+      "out_file": "../resource/logs/pm2/log/rpp2.stdout.log",
+      "pid_file": ".../resource/logs/pm2/pid/rpp2.pid",
+      "instances": 3,
+      "min_uptime": "200s",
+      "max_restarts": 10,
+      "max_memory_restart": "150M",
+      "cron_restart": "1 0 * * *",
+      "watch": true,
+      "merge_logs": true,
+      "exec_interpreter": "node",
+      "exec_mode": "cluster",
+      "autorestart": false,
+      "vizion": false
+    }
+  ]
+}
