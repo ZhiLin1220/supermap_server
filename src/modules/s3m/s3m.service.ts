@@ -60,47 +60,26 @@ export class S3mService {
    * @param scene
    * @returns
    */
-  getAttribute(scene: string) {
-    const filePath = join(
-      process.cwd(),
-      'resource/S3M',
-      scene,
-      'attribute.json',
-    );
-    const fileContent = readFileSync(filePath, 'utf8');
-    return JSON.parse(fileContent); // 返回 JSON 数据
-  }
-  /**
-   * 获取S3M文件
-   * @param scene
-   * @param fileName
-   * @returns
-   */
-  getS3MFIle(scene: string, fileName: string) {
-    const filePath = join(
-      process.cwd(),
-      'resource/S3M',
-      scene,
-      `${fileName}.s3mb`,
-    );
+  getCacheFile(scene: string, path: string, fileName: string) {
+    let filePath: string = '';
+    if (scene === path) {
+      filePath = join(process.cwd(), 'resource/S3M', scene, fileName);
+    } else {
+      filePath = join(process.cwd(), 'resource/S3M', scene, path, fileName);
+    }
+
     const file = createReadStream(filePath);
     return new StreamableFile(file);
   }
   /**
-   * 获取贴图文件
+   * 获取其他文件
    * @param scene
    * @param fileName
    * @returns
    */
-  getTextureFIle(scene: string, fileName: string) {
-    const path = join(
-      process.cwd(),
-      'resource/S3M',
-      scene,
-      'Texture',
-      `${fileName}.dxtz`,
-    );
-    const file = createReadStream(path);
+  getOtherFile(scene: string, fileName: string) {
+    const filePath = join(process.cwd(), 'resource/S3M', scene, fileName);
+    const file = createReadStream(filePath);
     return new StreamableFile(file);
   }
 }

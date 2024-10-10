@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { XMLParser } from 'fast-xml-parser';
-import { readFileSync, openSync, readSync, closeSync } from 'fs';
+import { readFileSync, openSync, readSync, closeSync, existsSync } from 'fs';
 import { join } from 'path';
 
 interface TileContext {
@@ -36,41 +36,39 @@ export class TileService {
     }
   }
 
+  /**
+   *从bundle读取瓦片
+   * @param context
+   * @returns
+   */
   private readTileFromBundle(context: TileContext) {
     const bundleFileName = context.bundleFileName;
     const index = context.index;
-    const fd = openSync(bundleFileName, 'r');
-    // 创建一个缓冲区来读取数据
-    const offsetBuffer = Buffer.alloc(4);
-    // 从文件的指定位置开始读取数据，64 + 8 * index 是偏移量
-    readSync(fd, offsetBuffer, 0, offsetBuffer.length, 64 + 8 * index);
-
-    // 读取数据偏移
-    const dataOffset = offsetBuffer.readInt32LE();
-    const lengthOffset = dataOffset - 4;
-
-    // 读取指定位置的瓦片数据
-    const tileData = this.readTile(bundleFileName, lengthOffset);
-    return tileData;
-  }
-  private readTile(bundleFileName: string, offset: number) {
     try {
+      if (!existsSync(bundleFileName)) {
+        return { bytesRead: 0, buffer: Buffer.alloc(0) };
+      }
       // 打开文件
       const fd = openSync(bundleFileName, 'r');
+      // 创建一个缓冲区来读取数据
+      const offsetBuffer = Buffer.alloc(4);
+      // 从文件的指定位置开始读取数据，64 + 8 * index 是偏移量
+      readSync(fd, offsetBuffer, 0, offsetBuffer.length, 64 + 8 * index);
+
+      // 读取数据偏移
+      const dataOffset = offsetBuffer.readInt32LE();
 
       // 读取瓦片数据长度（4 字节）
       const lengthBytes = Buffer.alloc(4);
-      readSync(fd, lengthBytes, 0, lengthBytes.length, offset);
+      readSync(fd, lengthBytes, 0, lengthBytes.length, dataOffset - 4);
 
       const length = lengthBytes.readInt32LE();
 
       // 读取瓦片数据
       const tileData = Buffer.alloc(length);
-      const bytesRead = readSync(fd, tileData, 0, tileData.length, offset + 4);
-
+      const bytesRead = readSync(fd, tileData, 0, tileData.length, dataOffset);
       // 关闭文件
       closeSync(fd);
-
       return { bytesRead, buffer: tileData };
     } catch (err) {
       console.error('Error reading tile:', err);
@@ -109,7 +107,6 @@ export class TileService {
    */
   private getCacheConfFile(layer: string) {
     const filePath = join(process.cwd(), `resource/tile/${layer}/Conf.xml`);
-
     const confFile = readFileSync(filePath, { encoding: 'utf8' });
     const parser = new XMLParser();
     const options = parser.parse(confFile);
