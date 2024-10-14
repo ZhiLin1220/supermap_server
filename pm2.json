@@ -1,13 +1,13 @@
 {
   "apps": [
     {
-      "name": "s3m_map_server",
+      "name": "map_server",
       "cwd": "./",
       "script": "main.js",
       "log_date_format": "YYYY-MM-DD HH:mm Z",
-      "error_file": "../resource/logs/pm2/rpp2.stderr.log",
-      "out_file": "../resource/logs/pm2/log/rpp2.stdout.log",
-      "pid_file": ".../resource/logs/pm2/pid/rpp2.pid",
+      "error_file": "./resource/logs/pm2/rpp2.stderr.log",
+      "out_file": "./resource/logs/pm2/log/rpp2.stdout.log",
+      "pid_file": "./resource/logs/pm2/pid/rpp2.pid",
       "instances": 3,
       "min_uptime": "200s",
       "max_restarts": 10,

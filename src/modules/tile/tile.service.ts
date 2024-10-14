@@ -11,7 +11,12 @@ interface TileContext {
 }
 @Injectable()
 export class TileService {
-  constructor() {}
+  private rootPath: string = process.cwd();
+  constructor() {
+    this.rootPath = process.cwd().includes('dist')
+      ? join(process.cwd(), `../resource`)
+      : join(process.cwd(), `./resource`);
+  }
 
   // 获取瓦片，使用 XYZ 坐标系
   public getTile(layer: string, x: number, y: number, z: number) {
@@ -94,10 +99,7 @@ export class TileService {
     const r = rGroup.toString(16).padStart(4, '0');
     const c = cGroup.toString(16).padStart(4, '0');
 
-    return join(
-      process.cwd(),
-      `resource/tile/${layer}/_alllayers/L${l}/R${r}C${c}`,
-    );
+    return join(this.rootPath, `tile/${layer}/_alllayers/L${l}/R${r}C${c}`);
   }
 
   /**
@@ -106,7 +108,7 @@ export class TileService {
    * @returns
    */
   private getCacheConfFile(layer: string) {
-    const filePath = join(process.cwd(), `resource/tile/${layer}/Conf.xml`);
+    const filePath = join(this.rootPath, `tile/${layer}/Conf.xml`);
     const confFile = readFileSync(filePath, { encoding: 'utf8' });
     const parser = new XMLParser();
     const options = parser.parse(confFile);

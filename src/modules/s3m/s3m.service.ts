@@ -4,6 +4,12 @@ import { join } from 'path';
 
 @Injectable()
 export class S3mService {
+  private rootPath: string = process.cwd();
+  constructor() {
+    this.rootPath = process.cwd().includes('dist')
+      ? join(process.cwd(), `../resource`)
+      : join(process.cwd(), `./resource`);
+  }
   /**
    * 获取许可
    * @returns
@@ -51,7 +57,7 @@ export class S3mService {
    * @returns
    */
   getConfig(scene: string): string {
-    const filePath = join(process.cwd(), 'resource/S3M', scene, `${scene}.scp`);
+    const filePath = join(this.rootPath, 'S3M', scene, `${scene}.scp`);
     const fileContent = readFileSync(filePath, 'utf8');
     return JSON.parse(fileContent); // 返回 JSON 数据
   }
@@ -63,9 +69,9 @@ export class S3mService {
   getCacheFile(scene: string, path: string, fileName: string) {
     let filePath: string = '';
     if (scene === path) {
-      filePath = join(process.cwd(), 'resource/S3M', scene, fileName);
+      filePath = join(this.rootPath, 'S3M', scene, fileName);
     } else {
-      filePath = join(process.cwd(), 'resource/S3M', scene, path, fileName);
+      filePath = join(this.rootPath, 'S3M', scene, path, fileName);
     }
 
     const file = createReadStream(filePath);
@@ -78,7 +84,7 @@ export class S3mService {
    * @returns
    */
   getOtherFile(scene: string, fileName: string) {
-    const filePath = join(process.cwd(), 'resource/S3M', scene, fileName);
+    const filePath = join(this.rootPath, 'S3M', scene, fileName);
     const file = createReadStream(filePath);
     return new StreamableFile(file);
   }
