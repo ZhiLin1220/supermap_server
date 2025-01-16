@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { XMLParser } from 'fast-xml-parser';
 import { readFileSync, openSync, readSync, closeSync, existsSync } from 'fs';
 import { join } from 'path';
+import * as sharp from 'sharp';
 
 interface TileContext {
   bundleFileName: string;
@@ -11,42 +12,115 @@ interface TileContext {
 }
 @Injectable()
 export class TileService {
-  private rootPath: string = process.cwd();
+  private rootPath: string = join(process.cwd(), `./resource`);
+  private buffer256: Buffer;
+  private buffer512: Buffer;
   constructor() {
-    this.rootPath = process.cwd().includes('dist')
-      ? join(process.cwd(), `../resource`)
-      : join(process.cwd(), `./resource`);
+    // this.rootPath = process.cwd().includes('dist')
+    //   ? join(process.cwd(), `../resource`)
+    //   : join(process.cwd(), `./resource`);
+    this.createImageBuffer(256);
+    this.createImageBuffer(512);
   }
 
   // 获取瓦片，使用 XYZ 坐标系
   public getTile(layer: string, x: number, y: number, z: number) {
     try {
-      const { CacheStorageInfo } = this.getCacheConfFile(layer);
+      const { CacheStorageInfo, TileCacheInfo } = this.getCacheConfFile(layer);
       const { PacketSize, StorageFormat } = CacheStorageInfo;
-      const rGroup = Math.floor(y / PacketSize) * PacketSize;
-      const cGroup = Math.floor(x / PacketSize) * PacketSize;
-      const bundleBase = this.getBundlePath(layer, z, rGroup, cGroup);
+      const { TileRows } = TileCacheInfo;
+      if (StorageFormat === 'esriMapCacheStorageModeCompactV2') {
+        const rGroup = Math.floor(y / PacketSize) * PacketSize;
+        const cGroup = Math.floor(x / PacketSize) * PacketSize;
+        const bundleBase = this.getBundlePath(layer, z, rGroup, cGroup);
 
-      const bundleFileName = bundleBase + '.bundle';
+        const bundleFileName = bundleBase + '.bundle';
 
-      const context: TileContext = {
-        bundleFileName,
-        StorageFormat,
-        index: 0,
-      };
-      context.index = PacketSize * (y - rGroup) + (x - cGroup);
-      return this.readTileFromBundle(context);
+        const context: TileContext = {
+          bundleFileName,
+          StorageFormat,
+          index: 0,
+        };
+        context.index = PacketSize * (y - rGroup) + (x - cGroup);
+        return this.readTileFromBundleV2(context);
+      }
+      if (StorageFormat === 'esriMapCacheStorageModeExploded') {
+        const tileSize = TileRows;
+        return this.readTileFromDisk(layer, x, y, z, tileSize);
+      }
     } catch (err) {
       console.error('Error reading tile:', err);
     }
   }
 
   /**
-   *从bundle读取瓦片
+   *  生成透明图片buffer
+   * @param width
+   * @param height
+   * @returns
+   */
+  private async createImageBuffer(size: number) {
+    const png = await sharp({
+      create: {
+        width: size,
+        height: size,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      },
+    })
+      .png()
+      .toBuffer();
+    if (size === 256) {
+      this.buffer256 = png;
+    }
+    if (size === 512) {
+      this.buffer512 = png;
+    }
+  }
+
+  /**
+   * 返回空的瓦片
+   * @param size
+   * @returns
+   */
+  private returnEmptyTile(size: number) {
+    switch (size) {
+      case 256:
+        return this.buffer256;
+      case 512:
+        return this.buffer512;
+
+      default:
+        break;
+    }
+  }
+
+  /**
+   * 从磁盘读取读取瓦片
+   * @param context
+   */
+  private readTileFromDisk(
+    layer: string,
+    x: number,
+    y: number,
+    z: number,
+    tileSize: number,
+  ) {
+    const tilePath = this.getDiskTilePath(layer, z, x, y);
+    if (!tilePath) {
+      const tileData = this.returnEmptyTile(tileSize);
+      return { bytesRead: tileData.length, buffer: tileData };
+    }
+    const tileData = readFileSync(tilePath);
+    return { bytesRead: tileData.length, buffer: tileData };
+  }
+
+  /**
+   *从bundleV2读取瓦片
    * @param context
    * @returns
    */
-  private readTileFromBundle(context: TileContext) {
+  private readTileFromBundleV2(context: TileContext) {
     const bundleFileName = context.bundleFileName;
     const index = context.index;
     try {
@@ -100,6 +174,36 @@ export class TileService {
     const c = cGroup.toString(16).padStart(4, '0');
 
     return join(this.rootPath, `tile/${layer}/_alllayers/L${l}/R${r}C${c}`);
+  }
+
+  /**
+   * 获取离散瓦片在磁盘上的路径
+   * @param layer
+   * @param level
+   * @param x
+   * @param y
+   * @returns
+   */
+  private getDiskTilePath(
+    layer: string,
+    level: number,
+    x: number,
+    y: number,
+  ): string | null {
+    const l = level.toString().padStart(2, '0');
+    const r = y.toString(16).padStart(8, '0');
+    const c = x.toString(16).padStart(8, '0');
+    const tilePath = join(
+      this.rootPath,
+      `tile/${layer}/_alllayers/L${l}/R${r}/C${c}`,
+    );
+    if (existsSync(tilePath + '.jpg')) {
+      return tilePath + '.jpg';
+    }
+    if (existsSync(tilePath + '.png')) {
+      return tilePath + '.png';
+    }
+    return null;
   }
 
   /**

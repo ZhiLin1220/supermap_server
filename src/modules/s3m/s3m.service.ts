@@ -1,5 +1,5 @@
 import { Injectable, StreamableFile } from '@nestjs/common';
-import { createReadStream, readFileSync } from 'fs';
+import { createReadStream, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
 @Injectable()
@@ -57,9 +57,18 @@ export class S3mService {
    * @returns
    */
   getConfig(scene: string): string {
-    const filePath = join(this.rootPath, 'S3M', scene, `${scene}.scp`);
-    const fileContent = readFileSync(filePath, 'utf8');
-    return JSON.parse(fileContent); // 返回 JSON 数据
+    const scpFilePath = join(this.rootPath, 'S3M', scene, `${scene}.scp`);
+    if (existsSync(scpFilePath)) {
+      //scp文件存在，读取文件
+      const fileContent = readFileSync(scpFilePath, 'utf8');
+      return fileContent; // 返回 JSON 数据}
+    }
+    const sctFilePath = join(this.rootPath, 'S3M', scene, `${scene}.sct`);
+    if (existsSync(sctFilePath)) {
+      //sct文件存在，读取文件
+      const fileContent = readFileSync(sctFilePath, 'utf8');
+      return fileContent; // 返回 JSON 数据}
+    }
   }
   /**
    * 获取属性表

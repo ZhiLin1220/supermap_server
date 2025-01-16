@@ -4,13 +4,15 @@ FROM node:lts-alpine3.20
 LABEL key="yzl"
 
 
-RUN mkdir -p /project
+RUN mkdir -p /project \
+    && mkdir -p /project/process
 
 #指定工作目录
 WORKDIR /project/
 
 #将dist目录拷贝到镜像里
-COPY ./dist package.json pm2.json yarn.lock ./
+COPY  package.json pm2.json yarn.lock  ./ 
+COPY  ./dist ./process/ 
 
 #执行命令:安装依赖
 RUN  yarn global add pm2 \

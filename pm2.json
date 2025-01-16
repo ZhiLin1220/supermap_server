@@ -3,7 +3,7 @@
     {
       "name": "map_server",
       "cwd": "./",
-      "script": "main.js",
+      "script": "./process/main.js",
       "log_date_format": "YYYY-MM-DD HH:mm Z",
       "error_file": "./resource/logs/pm2/rpp2.stderr.log",
       "out_file": "./resource/logs/pm2/log/rpp2.stdout.log",
@@ -13,7 +13,7 @@
       "max_restarts": 10,
       "max_memory_restart": "150M",
       "cron_restart": "1 0 * * *",
-      "watch": true,
+      "watch": false,
       "merge_logs": true,
       "exec_interpreter": "node",
       "exec_mode": "cluster",
