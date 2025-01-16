@@ -15,6 +15,7 @@ export class TileService {
   private rootPath: string = join(process.cwd(), `./resource`);
   private buffer256: Buffer;
   private buffer512: Buffer;
+  private confMap: Map<string, any> = new Map<string, any>();
   constructor() {
     // this.rootPath = process.cwd().includes('dist')
     //   ? join(process.cwd(), `../resource`)
@@ -212,10 +213,14 @@ export class TileService {
    * @returns
    */
   private getCacheConfFile(layer: string) {
+    if (this.confMap.has(layer)) {
+      return this.confMap.get(layer);
+    }
     const filePath = join(this.rootPath, `tile/${layer}/Conf.xml`);
     const confFile = readFileSync(filePath, { encoding: 'utf8' });
     const parser = new XMLParser();
     const options = parser.parse(confFile);
+    this.confMap.set(layer, options.CacheInfo);
     return options.CacheInfo;
   }
 }
